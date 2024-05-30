@@ -1,0 +1,20 @@
+repo_name: blugnu/restapi
+report_id: 85da8fbbe268b1bbc92c4bca5955f26e
+version: 0.1
+repo_type: Public
+timestamp: '2024-05-30T08:26:44+00:00'
+requested_by: deltics
+provider: github
+branch: master
+detected_tools_count: 1
+tools:
+- name: Git
+  description: Fast, scalable, distributed revision control system
+  website_url: http://git-scm.com/
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Version Control System
+  image_url: https://img.stackshare.io/service/1046/git.png
+  detection_source_url: https://github.com/blugnu/restapi
+  detection_source: Repo Metadata
