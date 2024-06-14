@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -28,7 +29,7 @@ type fakeHandler struct {
 	isCalled bool
 }
 
-func (h *fakeHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) any {
+func (h *fakeHandler) ServeAPI(_ context.Context, _ *http.Request) any {
 	h.isCalled = true
 	return nil
 }
@@ -39,6 +40,22 @@ func TestHandler(t *testing.T) {
 		scenario string
 		exec     func(t *testing.T)
 	}{
+		{scenario: "EndpointFunc",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				isCalled := false
+				fn := func(_ context.Context, _ *http.Request) any {
+					isCalled = true
+					return nil
+				}
+
+				// ACT
+				_ = EndpointFunc(fn).ServeAPI(context.Background(), nil)
+
+				// ASSERT
+				test.IsTrue(t, isCalled)
+			},
+		},
 		{scenario: "Handler",
 			exec: func(t *testing.T) {
 				// ARRANGE
@@ -64,7 +81,7 @@ func TestHandler(t *testing.T) {
 				})()
 
 				// ACT
-				HandlerFunc(func(_ http.ResponseWriter, rq *http.Request) any {
+				HandlerFunc(func(_ context.Context, rq *http.Request) any {
 					return nil
 				})(rec, rq)
 
@@ -91,7 +108,7 @@ func TestHandler(t *testing.T) {
 				})()
 
 				// ACT
-				HandlerFunc(func(_ http.ResponseWriter, rq *http.Request) any {
+				HandlerFunc(func(_ context.Context, rq *http.Request) any {
 					return nil
 				})(rec, rq)
 
@@ -123,7 +140,7 @@ func TestHandler(t *testing.T) {
 				})()
 
 				// ACT
-				HandlerFunc(func(_ http.ResponseWriter, rq *http.Request) any {
+				HandlerFunc(func(_ context.Context, rq *http.Request) any {
 					return nil
 				})(rec, rq)
 
@@ -148,7 +165,7 @@ func TestHandler(t *testing.T) {
 				})()
 
 				// ACT
-				HandlerFunc(func(_ http.ResponseWriter, rq *http.Request) any {
+				HandlerFunc(func(_ context.Context, rq *http.Request) any {
 					panic("panic")
 				})(rec, rq)
 
@@ -170,7 +187,7 @@ func TestHandler(t *testing.T) {
 				})()
 
 				// ACT
-				HandlerFunc(func(_ http.ResponseWriter, rq *http.Request) any {
+				HandlerFunc(func(_ context.Context, rq *http.Request) any {
 					return http.StatusOK
 				})(rec, rq)
 

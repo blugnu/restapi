@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,20 +20,35 @@ var (
 	}
 )
 
-// EndpointFunc is a function that accepts http.ResponseWriter and
-// *http.Request arguments and returns a value of type 'any'.
+// EndpointFunc is a type for a function that conforms to the EndpointHandler
+// ServeAPI() method.  A function with the appropriate signature may be
+// converted to an EndpointHandler by casting to this type.
 //
-// It is the signature of functions that implement REST API endpoints.
-type EndpointFunc func(_ http.ResponseWriter, rq *http.Request) any
+// # example
+//
+//	func MyEndpoint(ctx context.Context, rq *http.Request) any {
+//		// do something
+//		return result
+//	}
+//
+//	var MyHandler = EndpointFunc(MyEndpoint)
+//
+//	func main() {
+//		http.HandleFunc("/my-endpoint", restapi.Handler(MyHandler))
+//		http.ListenAndServe(":8080", nil)
+//	}
+type EndpointFunc func(context.Context, *http.Request) any
 
-// EndpointHandler is an interface that defines a ServeHTTP method that
-// accepts http.ResponseWriter and *http.Request arguments and returns a
-// value of type 'any'.
-//
-// This interface must be implemented by types that handle REST API
-// endpoint requests.
+// ServeAPI implements the EndpointHandler interface for the EndpointFunc type.
+func (f EndpointFunc) ServeAPI(ctx context.Context, rq *http.Request) any {
+	return f(ctx, rq)
+}
+
+// EndpointHandler is an interface that defines a ServeAPI method that
+// conforms to the EndpointFunc signature, accepting a context.Context and
+// *http.Request arguments, returning a value of type 'any'.
 type EndpointHandler interface {
-	ServeHTTP(http.ResponseWriter, *http.Request) any
+	ServeAPI(context.Context, *http.Request) any
 }
 
 // HandlerFunc returns a http.HandlerFunc that calls a REST API endpoint
@@ -44,7 +60,7 @@ type EndpointHandler interface {
 //
 // The returned value is processed by the Handler function to generate
 // an appropriate response.
-func HandlerFunc(h EndpointFunc) http.HandlerFunc {
+func HandlerFunc(h func(context.Context, *http.Request) any) http.HandlerFunc {
 	return func(rw http.ResponseWriter, rq *http.Request) {
 		apirq, err := newRequest(rq)
 		if err != nil {
@@ -72,6 +88,7 @@ func HandlerFunc(h EndpointFunc) http.HandlerFunc {
 			}
 			return
 		}
+
 		defer func() {
 			if r := recover(); r != nil {
 				LogError(InternalError{
@@ -85,7 +102,7 @@ func HandlerFunc(h EndpointFunc) http.HandlerFunc {
 			}
 		}()
 
-		result := h(rw, rq)
+		result := h(rq.Context(), rq)
 		response := makeRequestResponse(apirq, result)
 		response.write(rw, rq)
 	}
@@ -93,9 +110,9 @@ func HandlerFunc(h EndpointFunc) http.HandlerFunc {
 
 // Handler returns a http.HandlerFunc that calls a restapi.EndpointHandler.
 //
-// A restapi.EndpointHandler is an interface that defines a ServeHTTP method
-// that accepts http.ResponseWriter and *http.Request arguments and returns a
+// A restapi.EndpointHandler is an interface that defines a ServeAPI method
+// that accepts a context.Context and a *http.Request argument, returning a
 // value of type 'any'.
 func Handler(h EndpointHandler) http.HandlerFunc {
-	return HandlerFunc(h.ServeHTTP)
+	return HandlerFunc(h.ServeAPI)
 }

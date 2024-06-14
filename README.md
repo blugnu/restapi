@@ -108,7 +108,7 @@ With `restapi` the above example could be rewritten as follows:
 ```go
 import "github.com/blugnu/restapi"
 
-func (h *Handler) Post(w http.ResponseWriter, r *http.Request) any {
+func (h *Handler) Post(ctx context.Context, r *http.Request) any {
     type data struct {
         ID       int    `json:"id"`
         Name     string `json:"name"`
@@ -173,11 +173,12 @@ import "github.com/blugnu/restapi"
 
 func TestPost(t *testing.T) {
     // ARRANGE
+    ctx := context.Background()
     h := &Handler{ db: &MockDB{} }
     r := httptest.NewRequest(http.MethodPost, "/post", strings.NewReader(`{"name":"John","surname":"Doe"}`))
 
     // ACT
-    result := h.Post(w, r)
+    result := h.Post(ctx, r)
 
     // ASSERT
     // (also illustrates tests using the `github.com/blugnu/test` package)
@@ -197,7 +198,7 @@ accepts a _modified_ `http.HandlerFunc` returning an `any` value:
 ```go
 import "github.com/blugnu/restapi"
 
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) any {
+func (h *Handler) Get(ctx context.Context, r *http.Request) any {
     // Parse query parameters
     query := r.URL.Query()
     id := query.Get("id")
@@ -221,11 +222,10 @@ func main() {
 }
 ```
 
-> _Note: Although it functions in a similar manner, the `restapi.HandlerFunc()` function is referred
-> to as '**end-ware**' rather than 'middleware' due to the additional `any` return value of a
-> `restapi.EndpointFunction` signature differs
-> from a http.Handler
-> argument meaning that it must typically be placed at the **end** of any middleware chain_
+> _Note: Although it functions similarly, the `restapi.HandlerFunc()` function is referred
+> to as '**end-ware**' rather than 'middleware'.  This is because a `restapi.EndpointFunc()` signature
+> differs from a `http.Handler`.  As a result, the `restapi.Handler` is typically placed at the **end**
+> of any middleware chain (though there may be a "long tail" of `restapi.Handler` middlewares)_
 
 In addition to the `HandlerFunc` endware, the `restapi` package also provides a `Handler()` endware
 which accepts a `restapi.EndpointHandler` rather than a function:
@@ -237,7 +237,7 @@ type GetHandler struct {
     db *Database
 }
 
-func (h *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) any {
+func (h *GetHandler) ServeAPI(ctx context.Context, r *http.Request) any {
     // Fetch data from database
     data, err := h.db.Get(id)
     if err != nil {
@@ -298,7 +298,7 @@ The `*Result` type provides methods to set additional details for the response:
 ```go
 import "github.com/blugnu/restapi"
 
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) any {
+func (h *Handler) Get(ctx context.Context, r *http.Request) any {
     // Parse query parameters
     query := r.URL.Query()
     id := query.Get("id")
@@ -323,7 +323,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) any {
 ```go
 import "github.com/blugnu/restapi"
 
-func (h *Handler) Put(w http.ResponseWriter, r *http.Request) any {
+func (h *Handler) Put(ctx context.Context, r *http.Request) any {
     // Parse request body
     var data any
     if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
