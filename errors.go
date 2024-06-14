@@ -12,4 +12,5 @@ var (
 	ErrMarshalErrorFailed      = errors.New("error marshalling an Error response")
 	ErrMarshalResultFailed     = errors.New("error marshalling response")
 	ErrNoAcceptHeader          = errors.New("no Accept header")
+	ErrUnexpectedField         = errors.New("unexpected field")
 )

@@ -34,7 +34,7 @@ func TestError(t *testing.T) {
 				result := NewError(404, err, "message", rq)
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{
+				test.That(t, *result).Equals(Error{
 					statusCode: 404,
 					err:        err,
 					message:    test.AddressOf("message"),
@@ -66,7 +66,7 @@ func TestError(t *testing.T) {
 				result := NewError()
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{statusCode: 500})
+				test.That(t, *result).Equals(Error{statusCode: 500})
 			},
 		},
 		{scenario: "NewError/multiple errors",
@@ -90,7 +90,7 @@ func TestError(t *testing.T) {
 				result := NewError("error 1", "error 2")
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{
+				test.That(t, *result).Equals(Error{
 					statusCode: 500,
 					message:    test.AddressOf("error 1 error 2"),
 				})
@@ -105,7 +105,7 @@ func TestError(t *testing.T) {
 				result := NewError(err, "message")
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{
+				test.That(t, *result).Equals(Error{
 					statusCode: 500,
 					err:        err,
 					message:    test.AddressOf("message"),
@@ -113,11 +113,109 @@ func TestError(t *testing.T) {
 			},
 		},
 
+		// Is tests
+		{scenario: "Is",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				type T = testing.T
+				sut := Error{
+					statusCode: 404,
+					err:        errors.New("error"),
+					message:    test.AddressOf("message"),
+					help:       test.AddressOf("help"),
+					properties: map[string]any{"key": "value"},
+					headers:    map[string]any{"header": "value"},
+				}
+				testcases := []struct {
+					name   string
+					sut    Error
+					target error
+					assert func(*T, bool)
+				}{
+					{
+						name:   "target: nil",
+						target: nil,
+						assert: func(t *T, result bool) { test.IsFalse(t, result) },
+					},
+					{
+						name:   "target: zero value: Error{}",
+						target: Error{},
+						assert: func(t *T, result bool) { test.IsTrue(t, result) },
+					},
+					{
+						name:   "target: zero value: *Error{}",
+						target: &Error{},
+						assert: func(t *T, result bool) { test.IsTrue(t, result) },
+					},
+					{
+						name:   "target: match: status code",
+						target: Error{statusCode: 404},
+						assert: func(t *T, result bool) { test.IsTrue(t, result) },
+					},
+					{
+						name:   "target: match: message",
+						target: Error{message: test.AddressOf("message")},
+						assert: func(t *T, result bool) { test.IsTrue(t, result) },
+					},
+					{
+						name:   "target: match: help",
+						target: Error{help: test.AddressOf("help")},
+						assert: func(t *T, result bool) { test.IsTrue(t, result) },
+					},
+					{
+						name:   "target: match: properties",
+						target: Error{properties: map[string]any{"key": "value"}},
+						assert: func(t *T, result bool) { test.IsTrue(t, result) },
+					},
+					{
+						name:   "target: match: headers",
+						target: Error{headers: map[string]any{"header": "value"}},
+						assert: func(t *T, result bool) { test.IsTrue(t, result) },
+					},
+
+					{
+						name:   "target: no match: status code",
+						target: Error{statusCode: 500},
+						assert: func(t *T, result bool) { test.IsFalse(t, result) },
+					},
+					{
+						name:   "target: no match: message",
+						target: Error{message: test.AddressOf("no match")},
+						assert: func(t *T, result bool) { test.IsFalse(t, result) },
+					},
+					{
+						name:   "target: no match: help",
+						target: Error{help: test.AddressOf("no match")},
+						assert: func(t *T, result bool) { test.IsFalse(t, result) },
+					},
+					{
+						name:   "target: no match: properties",
+						target: Error{properties: map[string]any{}},
+						assert: func(t *T, result bool) { test.IsFalse(t, result) },
+					},
+					{
+						name:   "target: no match: headers",
+						target: Error{headers: map[string]any{"header": "no match"}},
+						assert: func(t *T, result bool) { test.IsFalse(t, result) },
+					},
+				}
+				for _, tc := range testcases {
+					t.Run(tc.name, func(t *testing.T) {
+						// ACT
+						result := sut.Is(tc.target)
+
+						// ASSERT
+						tc.assert(t, result)
+					})
+				}
+			},
+		},
+
 		// hasHeaders() / hasProperties() tests
 		{scenario: "hasHeaders/nil",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{}
+				err := Error{}
 
 				// ACT
 				result := err.hasHeaders()
@@ -131,7 +229,7 @@ func TestError(t *testing.T) {
 		{scenario: "hasHeaders/not nil",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{headers: headers{"key": "value"}}
+				err := Error{headers: headers{"key": "value"}}
 
 				// ACT
 				result := err.hasHeaders()
@@ -143,7 +241,7 @@ func TestError(t *testing.T) {
 		{scenario: "hasProperties/nil",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{}
+				err := Error{}
 
 				// ACT
 				result := err.hasProperties()
@@ -157,7 +255,7 @@ func TestError(t *testing.T) {
 		{scenario: "hasProperties/not nil",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{properties: map[string]any{"key": "value"}}
+				err := Error{properties: map[string]any{"key": "value"}}
 
 				// ACT
 				result := err.hasProperties()
@@ -171,7 +269,7 @@ func TestError(t *testing.T) {
 		{scenario: "makeResponse",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404, message: test.AddressOf("message")}
+				err := Error{statusCode: 404, message: test.AddressOf("message")}
 				rq := &Request{
 					Request:        &http.Request{URL: &url.URL{}},
 					Accept:         "request/Content-Type",
@@ -195,7 +293,7 @@ func TestError(t *testing.T) {
 		{scenario: "makeResponse/invalid status code",
 			exec: func(t *testing.T) {
 				// ARRANGE & ASSERT
-				err := &Error{statusCode: 600}
+				err := Error{statusCode: 600}
 				defer test.ExpectPanic(ErrInvalidStatusCode).Assert(t)
 
 				// ACT
@@ -205,7 +303,7 @@ func TestError(t *testing.T) {
 		{scenario: "makeResponse/fails to marshal error response",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404, message: test.AddressOf("message")}
+				err := Error{statusCode: 404, message: test.AddressOf("message")}
 				rq := &Request{
 					Request: &http.Request{URL: &url.URL{}},
 					Accept:  "application/json",
@@ -250,7 +348,7 @@ func TestError(t *testing.T) {
 		{scenario: "info",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{
+				err := Error{
 					statusCode: 404,
 					err:        errors.New("error"),
 					help:       test.AddressOf("help"),
@@ -280,7 +378,7 @@ func TestError(t *testing.T) {
 		{scenario: "Error/no error or message",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404}
+				err := Error{statusCode: 404}
 
 				// ACT
 				result := err.Error()
@@ -292,7 +390,7 @@ func TestError(t *testing.T) {
 		{scenario: "Error/with error and no message",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404, err: errors.New("error")}
+				err := Error{statusCode: 404, err: errors.New("error")}
 
 				// ACT
 				result := err.Error()
@@ -304,7 +402,7 @@ func TestError(t *testing.T) {
 		{scenario: "Error/with message and no error",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404, message: test.AddressOf("message")}
+				err := Error{statusCode: 404, message: test.AddressOf("message")}
 
 				// ACT
 				result := err.Error()
@@ -316,7 +414,7 @@ func TestError(t *testing.T) {
 		{scenario: "Error/with error and message",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404, err: errors.New("error"), message: test.AddressOf("message")}
+				err := Error{statusCode: 404, err: errors.New("error"), message: test.AddressOf("message")}
 
 				// ACT
 				result := err.Error()
@@ -330,7 +428,7 @@ func TestError(t *testing.T) {
 		{scenario: "Unwrap/no error",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404}
+				err := Error{statusCode: 404}
 
 				// ACT
 				result := err.Unwrap()
@@ -343,7 +441,7 @@ func TestError(t *testing.T) {
 			exec: func(t *testing.T) {
 				// ARRANGE
 				e := errors.New("error")
-				err := &Error{statusCode: 404, err: e}
+				err := Error{statusCode: 404, err: e}
 
 				// ACT
 				result := err.Unwrap()
@@ -357,7 +455,7 @@ func TestError(t *testing.T) {
 		{scenario: "WithHeader",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404}
+				err := Error{statusCode: 404}
 
 				// ACT
 				result := err.WithHeader("key", "value")
@@ -372,7 +470,7 @@ func TestError(t *testing.T) {
 		{scenario: "WithHeaders",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404}
+				err := Error{statusCode: 404}
 
 				// ACT
 				result := err.WithHeaders(map[string]any{
@@ -389,7 +487,7 @@ func TestError(t *testing.T) {
 		{scenario: "WithNonCanonicalHeader",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404}
+				err := Error{statusCode: 404}
 
 				// ACT
 				result := err.WithNonCanonicalHeader("key", "value")
@@ -406,7 +504,7 @@ func TestError(t *testing.T) {
 		{scenario: "WithHelp",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404}
+				err := Error{statusCode: 404}
 
 				// ACT
 				result := err.WithHelp("help")
@@ -421,7 +519,7 @@ func TestError(t *testing.T) {
 		{scenario: "WithMessage",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404}
+				err := Error{statusCode: 404}
 
 				// ACT
 				result := err.WithMessage("message")
@@ -438,7 +536,7 @@ func TestError(t *testing.T) {
 		{scenario: "WithProperty",
 			exec: func(t *testing.T) {
 				// ARRANGE
-				err := &Error{statusCode: 404}
+				err := Error{statusCode: 404}
 
 				// ACT
 				result := err.WithProperty("key", "value")
@@ -466,7 +564,7 @@ func TestError(t *testing.T) {
 				result := NewError(404, err)
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{statusCode: 404, err: err, timeStamp: ts})
+				test.That(t, *result).Equals(Error{statusCode: 404, err: err, timeStamp: ts})
 			},
 		},
 		{scenario: "factory/BadRequest",
@@ -475,7 +573,7 @@ func TestError(t *testing.T) {
 				result := BadRequest(nil)
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{statusCode: 400})
+				test.That(t, *result).Equals(Error{statusCode: 400})
 			},
 		},
 		{scenario: "factory/Forbidden",
@@ -484,7 +582,7 @@ func TestError(t *testing.T) {
 				result := Forbidden(nil)
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{statusCode: 403})
+				test.That(t, *result).Equals(Error{statusCode: 403})
 			},
 		},
 		{scenario: "factory/InternalServerError",
@@ -493,7 +591,7 @@ func TestError(t *testing.T) {
 				result := InternalServerError(nil)
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{statusCode: 500})
+				test.That(t, *result).Equals(Error{statusCode: 500})
 			},
 		},
 		{scenario: "factory/NotFound",
@@ -502,7 +600,7 @@ func TestError(t *testing.T) {
 				result := NotFound(nil)
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{statusCode: 404})
+				test.That(t, *result).Equals(Error{statusCode: 404})
 			},
 		},
 		{scenario: "factory/Unauthorized",
@@ -511,7 +609,7 @@ func TestError(t *testing.T) {
 				result := Unauthorized(nil)
 
 				// ASSERT
-				test.That(t, result).Equals(&Error{statusCode: 401})
+				test.That(t, *result).Equals(Error{statusCode: 401})
 			},
 		},
 	}

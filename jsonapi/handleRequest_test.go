@@ -1,13 +1,13 @@
-package restapi
+package jsonapi
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	"net/http"
 	"testing"
 
+	"github.com/blugnu/restapi"
 	"github.com/blugnu/test"
 )
 
@@ -25,7 +25,7 @@ func TestHandleRequest(t *testing.T) {
 				}
 
 				// ACT
-				result := HandleRequest(rq, func(ctx context.Context, c *struct {
+				result := HandleRequest(rq, func(c *struct {
 					ID   int
 					Name string
 				}) any {
@@ -47,7 +47,7 @@ func TestHandleRequest(t *testing.T) {
 				})()
 
 				// ACT
-				result := HandleRequest(&http.Request{}, func(ctx context.Context, c *struct {
+				result := HandleRequest(&http.Request{}, func(c *struct {
 					ID   int
 					Name string
 				}) any {
@@ -55,7 +55,7 @@ func TestHandleRequest(t *testing.T) {
 				})
 
 				// ASSERT
-				test.Error(t, result.(error)).Is(ErrErrorReadingRequestBody)
+				test.Error(t, result.(error)).Is(restapi.ErrErrorReadingRequestBody)
 			},
 		},
 		{scenario: "request body is empty",
@@ -64,7 +64,7 @@ func TestHandleRequest(t *testing.T) {
 				rq := &http.Request{Body: io.NopCloser(bytes.NewReader([]byte{}))}
 
 				// ACT
-				result := HandleRequest(rq, func(ctx context.Context, c *struct {
+				result := HandleRequest(rq, func(c *struct {
 					ID   int
 					Name string
 				}) any {
@@ -76,19 +76,15 @@ func TestHandleRequest(t *testing.T) {
 				test.That(t, result).Equals(http.StatusOK)
 			},
 		},
-		{scenario: "request body cannot be unmarshalled",
+		{scenario: "invalid json",
 			exec: func(t *testing.T) {
 				// ARRANGE
 				rq := &http.Request{
 					Body: io.NopCloser(bytes.NewReader([]byte(`anything`))),
 				}
-				jsonerr := errors.New("json error")
-				defer test.Using(&jsonUnmarshal, func([]byte, interface{}) error {
-					return jsonerr
-				})()
 
 				// ACT
-				result := HandleRequest(rq, func(ctx context.Context, c *struct {
+				result := HandleRequest(rq, func(c *struct {
 					ID   int
 					Name string
 				}) any {
@@ -96,7 +92,49 @@ func TestHandleRequest(t *testing.T) {
 				})
 
 				// ASSERT
-				test.Error(t, result.(error)).Is(jsonerr)
+				test.Error(t, result.(error)).Is(ErrDecoder)
+			},
+		},
+		{scenario: "strict request/no body",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				rq := &http.Request{Body: io.NopCloser(bytes.NewReader([]byte{}))}
+
+				// ACT
+				result := StrictRequest(rq, func(_ *struct {
+					Known int
+				}) any {
+					return http.StatusOK
+				})
+
+				// ASSERT
+				err, isErr := result.(error)
+				test.IsTrue(t, isErr)
+				if isErr {
+					test.Error(t, err).Is(restapi.BadRequest(restapi.ErrBodyRequired))
+				}
+			},
+		},
+		{scenario: "strict request/unknown field in body",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				rq := &http.Request{
+					Body: io.NopCloser(bytes.NewReader([]byte(`{"unknown":1,"Known":2}`))),
+				}
+
+				// ACT
+				result := StrictRequest(rq, func(_ *struct {
+					Known int
+				}) any {
+					return http.StatusOK
+				})
+
+				// ASSERT
+				err, isErr := result.(error)
+				test.IsTrue(t, isErr)
+				if isErr {
+					test.Error(t, err).Is(restapi.ErrUnexpectedField)
+				}
 			},
 		},
 	}

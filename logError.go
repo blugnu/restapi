@@ -2,7 +2,7 @@ package restapi
 
 import "net/http"
 
-// ErrorInfo represents an error that occurred during the processing of a request.
+// InternalError represents an error that occurred during the processing of a request.
 //
 // Although it is exported this type should not be used directly by REST API
 // implementations, except when providing an implementation for the restapi.LogError

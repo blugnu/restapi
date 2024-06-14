@@ -5,6 +5,7 @@ package restapi
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -241,6 +242,38 @@ func (err Error) Error() string {
 
 	default:
 		return fmt.Sprintf("%d %s", code, status)
+	}
+}
+
+// Is returns true if the target error is an Error and the Error matches the target
+// error.  An Error matches the target error if:
+//
+//   - the status codes match or the target has no status code (matches any);
+//   - the messages match or the target has no message (matches any);
+//   - the help messages match or the target has no help message (matches any);
+//   - the properties match or the target has no properties (matches any);
+//   - the wrapped target error satisfies errors.Is() or the target has no wrapped
+//     error (matches any).
+func (err Error) Is(target error) bool {
+	// allows target to be specified as either *Error or Error
+	var t *Error
+	switch target := target.(type) {
+	case *Error:
+		t = target
+	case Error:
+		t = &target
+	default:
+		return false
+	}
+
+	{
+		target := t
+		return (target.statusCode == 0 || err.statusCode == target.statusCode) &&
+			((target.message == nil) || (err.message == nil) || (*err.message == *target.message)) &&
+			((target.help == nil) || (err.help == nil) || (*err.help == *target.help)) &&
+			((target.properties == nil) || (err.properties == nil) || maps.Equal(err.properties, target.properties)) &&
+			((target.headers == nil) || (err.headers == nil) || maps.Equal(err.headers, target.headers)) &&
+			(target.err == nil || errors.Is(err.err, target.err))
 	}
 }
 
