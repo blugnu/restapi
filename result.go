@@ -184,6 +184,15 @@ func Created() *Result { return &Result{statusCode: http.StatusCreated} }
 // NoContent returns a Result with http.StatusNoContent
 func NoContent() *Result { return &Result{statusCode: http.StatusNoContent} }
 
+// NotImplemented returns a Result with http.StatusNotImplemented
+//
+// Strictly speaking this is an Error response (in the 5xx range) but is
+// provided as a Result as it is a common placeholder response for yet-to-be
+// implemented endpoints.  Responses of this nature do not require the
+// capabilities of an Error, such as wrapping some runtime error or providing
+// additional Help etc.
+func NotImplemented() *Result { return &Result{statusCode: http.StatusNotImplemented} }
+
 // OK returns a Result with http.StatusOK
 func OK() *Result { return &Result{statusCode: http.StatusOK} }
 

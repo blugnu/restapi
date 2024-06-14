@@ -45,6 +45,15 @@ func TestResult(t *testing.T) {
 				test.That(t, result).Equals(&Result{statusCode: http.StatusNoContent})
 			},
 		},
+		{scenario: "factory/NotImplemented",
+			exec: func(t *testing.T) {
+				// ACT
+				result := NotImplemented()
+
+				// ASSERT
+				test.That(t, result).Equals(&Result{statusCode: http.StatusNotImplemented})
+			},
+		},
 		{scenario: "factory/OK",
 			exec: func(t *testing.T) {
 				// ACT
