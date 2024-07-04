@@ -375,6 +375,80 @@ func TestResult(t *testing.T) {
 					`}`)
 			},
 		},
+
+		// property accessors
+		{scenario: "Content",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				sut := &Result{content: []byte("content")}
+
+				// ACT
+				result := sut.Content()
+
+				// ASSERT
+				test.That(t, result).Equals([]byte("content"))
+			},
+		},
+		{scenario: "ContentType",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				sut := &Result{contentType: test.AddressOf("content/type")}
+
+				// ACT
+				result := sut.ContentType()
+
+				// ASSERT
+				test.That(t, result).Equals("content/type")
+			},
+		},
+		{scenario: "ContentType/nil",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				sut := &Result{}
+
+				// ACT
+				result := sut.ContentType()
+
+				// ASSERT
+				test.That(t, result).Equals("")
+			},
+		},
+		{scenario: "Headers",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				sut := &Result{headers: headers{
+					"Header": "value",
+				}}
+
+				// ACT
+				result := sut.Headers()
+
+				// ASSERT
+				test.Map(t, result).Equals(headers{
+					"Header": "value",
+				})
+
+				// ACT
+				result["Header"] = "new value"
+
+				// ASSERT
+				test.Map(t, sut.Headers(), "is a copy").Equals(headers{
+					"Header": "value",
+				})
+			},
+		},
+		{scenario: "StatusCode",
+			exec: func(t *testing.T) {
+				// ARRANGE
+				sut := &Result{statusCode: 404}
+
+				// ACT
+				result := sut.StatusCode()
+
+				// ASSERT
+				test.That(t, result).Equals(404)
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.scenario, func(t *testing.T) {

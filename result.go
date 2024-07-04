@@ -109,6 +109,33 @@ func (r Result) String() string {
 		r.statusCode, ifNil(r.contentType, "<nil>"), r.content, r.headers)
 }
 
+// Headers returns a copy of the headers set on the Result.
+func (r *Result) Headers() headers {
+	h := make(headers, len(r.headers))
+	for k, v := range r.headers {
+		h[k] = v
+	}
+	return h
+}
+
+// StatusCode returns the status code set on the Result.
+func (r *Result) StatusCode() int {
+	return r.statusCode
+}
+
+// Content returns the content set on the Result.
+func (r *Result) Content() any {
+	return r.content
+}
+
+// ContentType returns the content type set on the Result.
+func (r *Result) ContentType() string {
+	if r.contentType == nil {
+		return ""
+	}
+	return *r.contentType
+}
+
 // WithContent sets the content and content type of the Result.  The
 // specified content and content type will replace any content or
 // content type that may have been set on the Result previously.
